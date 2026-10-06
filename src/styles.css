@@ -168,3 +168,12 @@ footer{padding:44px 0;color:var(--dim);font:500 13px var(--sans);text-align:cent
 .remember{margin:0 0 22px;padding:22px 28px;border-radius:18px;box-shadow:var(--inset-s);background:linear-gradient(#8C9EFF24,#8C9EFF24),var(--bg);font:800 clamp(20px,2.6vw,28px)/1.4 var(--display);display:grid}
 .pattern{display:inline-block;padding:12px 24px;border-radius:999px;box-shadow:var(--inset-s);background:linear-gradient(#72E0B424,#72E0B424),var(--bg);color:var(--ok);font:800 clamp(16px,2vw,20px) var(--display)}
 .pattern em{font-style:normal;color:var(--dim);padding:0 4px}
+
+/* rows stage + "can we do better" */
+.rows{display:grid;gap:14px;min-width:max-content}
+.rowline{display:flex;align-items:center;gap:14px}
+.rowlabel{flex:none;width:64px;font:700 12px var(--sans);letter-spacing:1.2px;text-transform:uppercase;color:var(--dim)}
+.bar.empty{background:transparent;box-shadow:none;outline:1.5px dashed #E7E9F233;outline-offset:-1.5px}
+.better{margin-top:16px;padding:14px 18px;display:grid;gap:8px}
+.better label{font:700 12px var(--sans);letter-spacing:1.2px;text-transform:uppercase;color:var(--dim)}
+.better b{font:800 17px var(--display);color:var(--swap)}

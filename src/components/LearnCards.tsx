@@ -20,6 +20,13 @@ export function LearnCards({ problem: p }: { problem: Problem }) {
       <Card title="Complexity">
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}><Complexity time={p.time} space={p.space} /></div>
         <p>{p.complexityWhy}</p>
+        {p.better && (
+          <div className="pressed better">
+            <label>Can we do better?</label>
+            <b>{p.better.name}</b>
+            <span><Complexity time={p.better.time} space={p.better.space} /></span>
+          </div>
+        )}
       </Card>
     </div>
   );

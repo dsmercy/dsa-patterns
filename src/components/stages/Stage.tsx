@@ -34,11 +34,33 @@ function Tiles({ values, cells }: { values: (number | string)[]; cells: Cell[] }
   );
 }
 
+function Rows({ rows }: { rows: { label: string; values: (number | string | null)[]; cells: Cell[] }[] }) {
+  return (
+    <div className="rows">
+      {rows.map((r) => (
+        <div className="rowline" key={r.label}>
+          <span className="rowlabel">{r.label}</span>
+          <div className="bars" style={{ alignItems: "center", minHeight: 0 }}>
+            {r.values.map((v, i) => (
+              <div className="col" key={i}>
+                <Tags cell={r.cells[i] ?? {}} />
+                <div className={`${classOf(r.cells[i] ?? {})}${v === null ? " empty" : ""}`} style={{ height: 52, alignItems: "center", paddingTop: 0 }}>{v === null ? "" : String(v)}</div>
+                <div className="day">{i}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** Dispatches on stage.kind. New visual kinds are added here once and reused by every problem. */
 export function Stage({ stage, problem }: { stage: StageData; problem: Problem }) {
   switch (stage.kind) {
     case "bars": return <Bars values={stage.values} cells={stage.cells} />;
     case "tiles": return <Tiles values={stage.values} cells={stage.cells} />;
+    case "rows": return <Rows rows={stage.rows} />;
     case "custom": { const C = problem.customStage; return C ? <C data={stage.data} /> : null; }
   }
 }

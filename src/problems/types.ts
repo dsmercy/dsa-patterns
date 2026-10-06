@@ -12,6 +12,7 @@ export interface Cell {
 export type Stage =
   | { kind: "bars"; values: number[]; cells: Cell[] }   // heights ~ value (prices, heights, ...)
   | { kind: "tiles"; values: (number | string)[]; cells: Cell[] } // uniform tiles (arrays, strings)
+  | { kind: "rows"; rows: { label: string; values: (number | string | null)[]; cells: Cell[] }[] } // stacked rows (null = empty slot)
   | { kind: "custom"; data: unknown };                   // rendered by Problem.customStage
 
 export interface Step {
@@ -74,6 +75,8 @@ export interface Problem {
   /** default parser: comma separated JSON values, e.g. `[1,2,3], 4` -> [[1,2,3], 4] */
   parseInput?: (text: string) => Args;
 
+  /** a faster approach worth knowing; shown as a teaser card (the page code stays the simple version) */
+  better?: { name: string; time: string; space: string };
   challenge?: Challenge;
   memory?: InterviewMemory;
 
