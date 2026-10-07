@@ -8,7 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "generate": "esbuild scripts/generate.ts --bundle --platform=node --format=esm --outfile=.generate.mjs --log-level=error --external:node:fs --external:node:path && node .generate.mjs"
+    "generate": "esbuild scripts/generate.ts --bundle --platform=node --format=esm --outfile=.generate.mjs --log-level=error --external:node:fs --external:node:path && node .generate.mjs",
+    "set-login": "node scripts/set-login.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

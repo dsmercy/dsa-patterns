@@ -9,6 +9,7 @@ import { QuickChallenge } from "../components/QuickChallenge";
 import { InterviewMemory } from "../components/InterviewMemory";
 import { Complexity, Pill } from "../components/ui";
 import { NotFound } from "./NotFound";
+import { SHOW_PROBLEM_NAV } from "../config";
 
 export function ProblemPage() {
   const { slug } = useParams();
@@ -30,11 +31,11 @@ function ProblemView({ problem: p }: { problem: NonNullable<ReturnType<typeof by
   useEffect(() => { document.title = `${p.title} · DSA Patterns in Java · Coding Hacks`; window.scrollTo(0, 0); }, [p]);
 
   return (
-    <Layout nav={<>
+    <Layout homeLink={SHOW_PROBLEM_NAV} nav={SHOW_PROBLEM_NAV ? <>
       {prev && <Link className="btn" to={`/problem/${prev.slug}`}>← {prev.title}</Link>}
       <Link className="btn" to="/">All problems</Link>
       {next && <Link className="btn" to={`/problem/${next.slug}`}>{next.title} →</Link>}
-    </>}>
+    </> : null}>
       <header className="hero">
         <div className="num">#{String(p.number).padStart(3, "0")} · {p.id}</div>
         <h1>{p.title}</h1>
