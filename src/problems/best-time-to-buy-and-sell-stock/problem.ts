@@ -81,6 +81,7 @@ const problem: Problem = {
   time: "O(n)",
   space: "O(1)",
   complexityWhy: "We walk through the prices once and only keep two variables.",
+  figure: {"k":"arr","r":[{"v":[7,1,5,3,6,4],"ok":[1],"hi":[4],"p":{"1":"buy","4":"sell"},"ix":1}],"cap":"Buy at 1, sell at 6: profit 5."},
   code: CODE,
   method: "maxProfit",
   defaultInput: "[7,1,5,3,6,4]",

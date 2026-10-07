@@ -82,6 +82,7 @@ const problem: Problem = {
   time: "O(n)",
   space: "O(1)",
   complexityWhy: "One pass, no extra array.",
+  figure: {"k":"arr","r":[{"v":[1,1,2,2,3,3,4],"hi":[1,3,5],"p":{"0":"slow","1":"fast"}},{"l":"after","v":[1,2,3,4,3,3,4],"ok":[0,1,2,3],"br":[[0,3,"length 4"]]}],"cap":"slow marks the last unique slot; fast scans."},
   code: CODE,
   method: "removeDuplicates",
   defaultInput: "[1,1,2,2,3,3,4]",

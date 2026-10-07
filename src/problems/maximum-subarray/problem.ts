@@ -86,6 +86,7 @@ const problem: Problem = {
   time: "O(n)",
   space: "O(1)",
   complexityWhy: "One pass. A run with a negative sum is dropped.",
+  figure: {"k":"arr","r":[{"v":[-2,1,-3,4,-1,2,1,-5,4],"ok":[3,4,5,6],"br":[[3,6,"sum = 6"]]}],"cap":"The best run is 4, −1, 2, 1."},
   code: CODE,
   method: "maxSubArray",
   defaultInput: "[-2,1,-3,4,-1,2,1,-5,4]",

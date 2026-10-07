@@ -21,6 +21,8 @@ export interface Step {
   note: string;
   /** shown in the state panel, e.g. { LOWEST: 1, BEST: 4 } */
   state: Record<string, string | number>;
+  /** longer values (lists, maps, objects) shown as "name = text" lines under the state panel */
+  extra?: { label: string; text: string }[];
   /** key of `state` that should pulse (value just changed) */
   hot?: string;
   done?: boolean;
@@ -29,7 +31,15 @@ export interface Step {
 
 export type Args = unknown[];
 
-export interface TestCase { name: string; args: Args }
+export interface TestCase {
+  name: string; args: Args;
+  /** expected result as plain JSON; produced by running the reference Java (see scripts/generate.ts). Falls back to Problem.reference */
+  expected?: unknown;
+}
+
+/** The handbook's key-idea figure (static picture under "Key idea"). Kinds: arr | bars | flow | tree | list. */
+export interface FigureRow { l?: string; v: (number | string)[]; ok?: number[]; hi?: number[]; no?: number[]; p?: Record<string, string>; ix?: number; br?: [number, number, string][]; w?: number[] }
+export interface Figure { k: string; r?: FigureRow[]; v?: (number | string | null)[]; hi?: (number | string)[]; s?: string[]; cyc?: number; h?: number; cap?: string }
 
 /** Multiple-choice "Quick Challenge" shown under the walkthrough. */
 export interface Challenge {
@@ -76,7 +86,8 @@ export interface Problem {
   parseInput?: (text: string) => Args;
 
   /** a faster approach worth knowing; shown as a teaser card (the page code stays the simple version) */
-  better?: { name: string; time: string; space: string };
+  better?: { name: string; time: string; space: string; /** full Java source of the faster solution */ code?: string };
+  figure?: Figure;
   challenge?: Challenge;
   memory?: InterviewMemory;
 
@@ -84,7 +95,7 @@ export interface Problem {
   /** trusted JS reference solution; when present, outputs are checked against it */
   reference?: (...args: any[]) => unknown;
 
-  /** optional animation. Without it the page still works (learn + playground, no "Watch it run"). */
+  /** hand-made animation. Without it the page traces the Java code automatically ("Watch it run" for every problem). */
   buildSteps?: (args: Args) => Step[];
   /** color per state key (CSS color); defaults to pointer blue */
   stateColors?: Record<string, string>;

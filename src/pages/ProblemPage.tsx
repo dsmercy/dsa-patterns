@@ -41,14 +41,12 @@ function ProblemView({ problem: p }: { problem: NonNullable<ReturnType<typeof by
         <div className="chips"><Pill tone="cat">{p.category}</Pill><Complexity time={p.time} space={p.space} /></div>
       </header>
 
-      {p.buildSteps ? (
-        <div className="grid">
+      <div className="grid">
           <LearnCards problem={p} />
           <Visualizer problem={p} input={input} onInput={setInput} watchSignal={watchSignal} />
         </div>
-      ) : <LearnCards problem={p} />}
 
-      {p.challenge && <QuickChallenge challenge={p.challenge} onWatch={p.buildSteps ? watch : undefined} />}
+      {p.challenge && <QuickChallenge challenge={p.challenge} onWatch={watch} />}
 
       <Playground problem={p} input={input} onInput={setInput} />
 

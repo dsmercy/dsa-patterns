@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import type { Args, Problem } from "../problems/types";
 import { parseArgs, sameJson, show } from "../lib/args";
-import { javaWarnings, runJava, type CaseResult } from "../lib/javaRunner";
+import { runJava, type CaseOut } from "../lib/java";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { Card } from "./ui";
 import { CodeEditor } from "./CodeEditor";
 
-interface Row { name: string; args: Args; res: CaseResult; expected?: unknown; checked: boolean; pass: boolean }
+interface Row { name: string; args: Args; res: CaseOut; expected?: unknown; checked: boolean; pass: boolean }
 type Console = { cls: "e" | "w" | "g" | "d" | ""; text: string }[];
+const HINT: Console = [{ cls: "d", text: "Press Run (Ctrl/⌘ + Enter) to execute your code." }];
+const json = (v: unknown) => JSON.stringify(v);
 
 /** Editable Java + Run + custom input + test cases. Works for any Problem. */
 export function Playground({ problem, input, onInput }: { problem: Problem; input: string; onInput: (v: string) => void }) {
@@ -15,17 +17,18 @@ export function Playground({ problem, input, onInput }: { problem: Problem; inpu
   const [code, setCode, resetCode] = useLocalStorage(`ch:${problem.id}:code`, problem.code);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
-  const [con, setCon] = useState<Console>([{ cls: "d", text: "Press Run (Ctrl/⌘ + Enter) to execute your code." }]);
+  const [con, setCon] = useState<Console>(HINT);
   const [rows, setRows] = useState<Row[]>([]);
   const [copied, setCopied] = useState(false);
   const stale = useRef(0); // ignore results from an older Run
 
-  useEffect(() => { setRows([]); setCon([{ cls: "d", text: "Press Run (Ctrl/⌘ + Enter) to execute your code." }]); }, [problem.id]);
+  useEffect(() => { setRows([]); setCon(HINT); }, [problem.id]);
 
-  const expectedFor = (args: Args) => {
-    if (!problem.reference) return { checked: false as const };
-    try { return { checked: true as const, value: problem.reference(...(JSON.parse(JSON.stringify(args)) as unknown[])) }; }
-    catch { return { checked: false as const }; }
+  /** expected result: stored (generated from the reference Java) or computed by the hand-written JS reference */
+  const expectedFor = (args: Args, stored?: unknown): { checked: boolean; value?: unknown } => {
+    if (stored !== undefined) return { checked: true, value: stored };
+    if (!problem.reference) return { checked: false };
+    try { return { checked: true, value: problem.reference(...(JSON.parse(JSON.stringify(args)) as unknown[])) }; } catch { return { checked: false }; }
   };
 
   const run = async () => {
@@ -33,28 +36,27 @@ export function Playground({ problem, input, onInput }: { problem: Problem; inpu
     let custom: Args;
     try { custom = parse(input); setError(""); } catch (e) { setError((e as Error).message); return; }
     const tests = problem.tests ?? [];
-    const all = [{ name: "Your input", args: custom }, ...tests];
+    const all = [{ name: "Your input", args: custom, expected: undefined as unknown }, ...tests];
     const id = ++stale.current;
     setRunning(true);
     const out = await runJava(code, problem.method, all.map((c) => c.args));
     if (id !== stale.current) return;
     setRunning(false);
 
-    const lines: Console = javaWarnings(code).map((w) => ({ cls: "w" as const, text: `⚠ ${w}` }));
     if (!out.ok) {
-      lines.push({ cls: "e", text: out.timeout ? `✖ ${out.error}` : `✖ Error: ${out.error}` });
-      if (!out.timeout) lines.push({ cls: "d", text: "The browser runner translates Java to JavaScript, so compile errors can read like JS. Check braces, semicolons and the method name." });
+      const lines: Console = [{ cls: "e", text: out.phase === "timeout" ? `✖ ${out.error}` : out.phase === "compile" ? `✖ Compile error — ${out.error}` : `✖ ${out.error}` }];
+      if (out.phase === "compile") lines.push({ cls: "d", text: "Check braces, semicolons, spelling and types. The error names the line." });
       setCon(lines); setRows([]); return;
     }
     const next: Row[] = out.results.map((res, i) => {
-      const exp = expectedFor(all[i].args);
-      return { name: all[i].name, args: all[i].args, res, expected: exp.checked ? exp.value : undefined, checked: exp.checked, pass: res.ok && (!exp.checked || sameJson(res.value, exp.value)) };
+      const exp = i === 0 ? expectedFor(all[0].args, undefined) : expectedFor(all[i].args, all[i].expected);
+      return { name: all[i].name, args: all[i].args, res, expected: exp.value, checked: exp.checked, pass: res.ok && (!exp.checked || sameJson(res.value, exp.value)) };
     });
     const c = next[0];
-    lines.push({ cls: "d", text: `input  ${show(c.args)}` });
-    c.res.logs?.forEach((l) => lines.push({ cls: "", text: l }));
-    if (!c.res.ok) lines.push({ cls: "e", text: `✖ ${c.res.error}` });
-    else lines.push({ cls: c.pass ? "g" : "e", text: `output ${JSON.stringify(c.res.value)}${c.checked ? (c.pass ? "  ✓ matches expected" : `  ✖ expected ${JSON.stringify(c.expected)}`) : ""}` });
+    const lines: Console = [{ cls: "d", text: `input  ${show(c.args)}` }];
+    c.res.logs.forEach((l) => lines.push({ cls: "", text: l }));
+    if (!c.res.ok) lines.push({ cls: "e", text: `✖ ${c.res.errorName ? c.res.error : "Exception: " + c.res.error}${c.res.line ? `  (line ${c.res.line})` : ""}` });
+    else lines.push({ cls: c.pass ? "g" : "e", text: `output ${c.res.text ?? json(c.res.value)}${c.checked ? (c.pass ? "  ✓ matches expected" : `  ✖ expected ${json(c.expected)}`) : ""}` });
     setCon(lines);
     setRows(next.slice(1));
   };
@@ -92,11 +94,9 @@ export function Playground({ problem, input, onInput }: { problem: Problem; inpu
             <>
               <div className="label" style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>Test cases</span>
-                {rows.length > 0 && (
-                  <span style={{ textTransform: "none", letterSpacing: 0, font: "800 13px var(--display)", color: passed === rows.length ? "var(--ok)" : "var(--swap)" }}>
-                    {passed === rows.length ? `All ${rows.length} tests passed 🎉` : `${passed} / ${rows.length} tests passed`}
-                  </span>
-                )}
+                <span style={{ textTransform: "none", letterSpacing: 0, font: "800 13px var(--display)", color: passed === rows.length ? "var(--ok)" : "var(--swap)" }}>
+                  {passed === rows.length ? `All ${rows.length} tests passed 🎉` : `${passed} / ${rows.length} tests passed`}
+                </span>
               </div>
               <div className="cases">
                 {rows.map((r) => (
@@ -104,7 +104,7 @@ export function Playground({ problem, input, onInput }: { problem: Problem; inpu
                     <span className="dot" />
                     <div><b style={{ font: "700 13px var(--sans)" }}>{r.name}</b><small>{show(r.args)}</small></div>
                     <div className="r">
-                      {!r.res.ok ? `✖ ${r.res.error}` : r.pass ? `✓ ${JSON.stringify(r.res.value)}` : `${JSON.stringify(r.res.value)} ≠ ${JSON.stringify(r.expected)}`}
+                      {!r.res.ok ? `✖ ${r.res.error}` : r.pass ? `✓ ${r.res.text ?? json(r.res.value)}` : `${r.res.text ?? json(r.res.value)} ≠ ${json(r.expected)}`}
                     </div>
                   </div>
                 ))}
