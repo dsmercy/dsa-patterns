@@ -228,3 +228,30 @@ footer{padding:44px 0;color:var(--dim);font:500 13px var(--sans);text-align:cent
 .login-err{min-height:22px;color:var(--err);font:600 13px var(--sans);margin-top:6px}
 .login-go{margin-top:4px;padding:12px 20px;font-size:15px}
 .login .pw .field{flex:1;width:auto;min-width:0}
+.note,.state b,.case code,.case small,.case .r,.hint kbd,.q-input code,.opt{font-variant-ligatures:none;font-feature-settings:"liga" 0,"calt" 0}
+
+/* trees + linked lists (trace blocks and figures) */
+.fig-tree .tn.cur{fill:#8C9EFF33;stroke:var(--pointer)}
+.fig-tree .tn.bad{fill:#FF8A9B33;stroke:var(--err)}
+.fig-tree .tn-mark{fill:var(--pointer);font:700 11px var(--sans)}
+.ll{display:flex;align-items:flex-start;gap:6px;min-width:max-content}
+.ll-node{display:flex;flex-direction:column;align-items:center;gap:6px;width:54px}
+.ll-node .bar{width:100%}
+.ll-arrow{align-self:center;color:var(--dim);font:700 16px var(--mono);padding-top:26px;white-space:nowrap}
+.rowline>.fig-tree{flex:1}
+
+/* more figure kinds */
+.fig-parts{display:grid;gap:16px}
+.fig-txt{margin:0;font:600 13px/1.6 var(--mono);color:var(--ink);white-space:pre-wrap}
+.fig-tree .tn.low{fill:#FFAE7E33;stroke:var(--swap)}
+.fig-grid{display:grid;gap:6px;width:max-content}
+.fig-stacks{display:flex;gap:26px;align-items:flex-end;flex-wrap:wrap}
+.fig-stack{display:grid;justify-items:center;gap:6px}
+.stack-col{display:flex;flex-direction:column;gap:6px}
+.fig-ivl{display:grid;gap:12px;min-width:360px}
+.ivl-row{display:flex;gap:12px;align-items:center}
+.ivl-row .rowlabel{width:60px;padding-top:0}
+.ivl-track{position:relative;flex:1;height:40px;border-radius:12px;box-shadow:var(--inset-s)}
+.ivl-bar{position:absolute;top:5px;height:30px;border-radius:10px;box-shadow:var(--raised-s);font:700 11px var(--mono);display:flex;align-items:center;justify-content:center;white-space:nowrap}
+.ivl-bar.win{color:var(--ok);background:linear-gradient(#72E0B424,#72E0B424),var(--bg)}
+.ivl-bar.cur{color:var(--pointer);background:linear-gradient(#8C9EFF24,#8C9EFF24),var(--bg)}

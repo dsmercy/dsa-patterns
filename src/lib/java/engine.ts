@@ -3,6 +3,7 @@
 import { CompileError, compileJava, type Compiled } from "./compiler";
 import { createRuntime, JavaException } from "./runtime";
 import { fromPlain, parseType, snapshot, toPlain, typedStr, type Snap } from "./values";
+import { buildArgs, snapshotAll } from "./structures";
 import type { Type } from "./parser";
 
 export const PRELUDE = `
@@ -16,13 +17,13 @@ export type EngineResult =
   | { ok: false; phase: "compile" | "setup"; error: string; line?: number }
   | { ok: true; results: CaseOut[]; steps?: TraceStep[]; truncated?: boolean; indexUse?: Record<string, string[]> };
 
-export interface EngineOptions { trace?: boolean; maxSteps?: number; maxHooks?: number }
+export interface EngineOptions { trace?: boolean; maxSteps?: number; maxHooks?: number; /** extra Java classes (e.g. a problem-specific Node) added when referenced and not defined by the user */ prelude?: string }
 
 const errText = (e: any) => (e instanceof JavaException ? e.toString() : e instanceof Error ? e.message : String(e));
 
 export function execute(code: string, method: string, cases: unknown[][], opts: EngineOptions = {}): EngineResult {
   let compiled: Compiled;
-  try { compiled = compileJava(code, { trace: !!opts.trace, prelude: PRELUDE }); }
+  try { compiled = compileJava(code, { trace: !!opts.trace, prelude: PRELUDE + (opts.prelude ?? "") }); }
   catch (e: any) {
     if (e instanceof CompileError) return { ok: false, phase: "compile", error: e.message, line: e.line };
     return { ok: false, phase: "compile", error: `Internal compiler error: ${errText(e)}` };
@@ -41,7 +42,9 @@ export function execute(code: string, method: string, cases: unknown[][], opts: 
       if (++hooks > maxHooks) throw new JavaException("Error", "Trace stopped: the program ran too many steps");
       if (steps.length >= maxSteps) { truncated = true; return; }
       const site = compiled.sites[id];
-      steps.push({ line: site.line, fn: site.fn, vars: site.vars.map((v, i) => ({ n: v.n, t: v.t, v: safeSnap(vals[i], siteTypes[id][i]) })), out: logsRef.logs.slice() });
+      let snaps: (Snap | null)[];
+      try { snaps = snapshotAll(site.vars.map((v, i) => ({ n: v.n, t: siteTypes[id][i], v: vals[i] }))); } catch { snaps = site.vars.map((v, i) => safeSnap(vals[i], siteTypes[id][i])); }
+      steps.push({ line: site.line, fn: site.fn, vars: site.vars.map((v, i) => ({ n: v.n, t: v.t, v: snaps[i] })), out: logsRef.logs.slice() });
     },
   });
 
@@ -68,15 +71,16 @@ export function execute(code: string, method: string, cases: unknown[][], opts: 
     if (!sigs.length) { results.push({ ok: false, error: `Method \`${method}\` takes ${compiled.classes[clsName].methods[method][0].params.length} argument(s) but the input has ${args.length}.`, logs }); continue; }
     const sig = sigs[0];
     try {
-      const jargs = args.map((a, i) => fromPlain(a, sig.params[i], mod.classes));
+      const jargs = buildArgs(args, sig.params, mod.classes);
       const target = sig.static ? mod.classes[clsName] : new mod.classes[clsName]();
       const v = target[sig.js](...jargs);
       const rtType: Type | null = sig.ret.name === "void" ? null : sig.ret;
       // methods that return void (in-place) are shown as the mutated first argument
       const value = rtType ? toPlain(v, rtType) : toPlain(jargs[0], sig.params[0] ?? null);
-      const text = rtType ? typedStr(v, rtType) : typedStr(jargs[0], sig.params[0] ?? null);
+      const isNode = rtType && rtType.dims === 0 && ["TreeNode", "ListNode", "Node"].includes(rtType.name);
+      const text = isNode ? JSON.stringify(value) : rtType ? typedStr(v, rtType) : typedStr(jargs[0], sig.params[0] ?? null);
       results.push({ ok: true, value, text, logs, ms: performance.now() - t0 });
-      if (opts.trace) { steps.push({ line: lastLineOf(compiled), fn: method, vars: [{ n: "return", t: tyShow(sig.ret), v: rtType ? safeSnap(v, rtType) : null }], out: logs.slice() }); }
+      if (opts.trace) { steps.push({ line: lastLineOf(compiled), fn: method, vars: [{ n: "return", t: tyShow(sig.ret), v: rtType ? (safeAll(v, rtType)) : null }], out: logs.slice() }); }
     } catch (e: any) {
       const w = e instanceof JavaException ? e : null;
       results.push({ ok: false, error: errText(e), errorName: w?.jname, line: mod.getLine(), logs });
@@ -87,6 +91,7 @@ export function execute(code: string, method: string, cases: unknown[][], opts: 
 
 const tyShow = (t: Type) => t.name + "[]".repeat(t.dims);
 const lastLineOf = (c: Compiled) => Math.max(...c.sites.map((s) => s.line), 1);
+function safeAll(v: any, t: Type): Snap | null { try { return snapshotAll([{ n: "return", t, v }])[0]; } catch { return safeSnap(v, t); } }
 function safeSnap(v: any, t: Type): Snap | null { try { return snapshot(v, t); } catch { return { kind: "text", text: "?" }; } }
 
 /** Design problems (constructor + operations): case = [ctorArgs, [[op, ...args], ...]] -> list of op results. */

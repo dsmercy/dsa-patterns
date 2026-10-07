@@ -17,5 +17,5 @@ function request(code: string, method: string, cases: unknown[][], opts: EngineO
   });
 }
 
-export const runJava = (code: string, method: string, cases: unknown[][], timeoutMs = 4000) => request(code, method, cases, {}, timeoutMs);
-export const traceJava = (code: string, method: string, args: unknown[], timeoutMs = 4000) => request(code, method, [args], { trace: true }, timeoutMs);
+export const runJava = (code: string, method: string, cases: unknown[][], timeoutMs = 4000, prelude?: string) => request(code, method, cases, { prelude }, timeoutMs);
+export const traceJava = (code: string, method: string, args: unknown[], timeoutMs = 4000, prelude?: string) => request(code, method, [args], { trace: true, prelude }, timeoutMs);

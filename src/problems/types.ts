@@ -13,7 +13,13 @@ export type Stage =
   | { kind: "bars"; values: number[]; cells: Cell[] }   // heights ~ value (prices, heights, ...)
   | { kind: "tiles"; values: (number | string)[]; cells: Cell[] } // uniform tiles (arrays, strings)
   | { kind: "rows"; rows: { label: string; values: (number | string | null)[]; cells: Cell[] }[] } // stacked rows (null = empty slot)
+  | { kind: "blocks"; blocks: Block[] }   // arrays + trees + linked lists drawn one under the other (traces of structure problems)
   | { kind: "custom"; data: unknown };                   // rendered by Problem.customStage
+
+export type Block =
+  | { type: "row"; label: string; values: (number | string | null)[]; cells: Cell[] }
+  | { type: "tree"; label: string; values: (number | null)[]; marks: Record<number, string[]>; truncated?: boolean }
+  | { type: "list"; label: string; values: (number | string)[]; cyc?: number; marks: Record<number, string[]>; truncated?: boolean };
 
 export interface Step {
   /** 0-based line of Problem.code to highlight */
@@ -37,9 +43,9 @@ export interface TestCase {
   expected?: unknown;
 }
 
-/** The handbook's key-idea figure (static picture under "Key idea"). Kinds: arr | bars | flow | tree | list. */
+/** The handbook's key-idea figure (static picture under "Key idea"). Kinds: arr | bars | flow | txt | tree | list | grid | graph | stack | ivl | nary. Problem.figure may be one figure or a list of them. */
 export interface FigureRow { l?: string; v: (number | string)[]; ok?: number[]; hi?: number[]; no?: number[]; p?: Record<string, string>; ix?: number; br?: [number, number, string][]; w?: number[] }
-export interface Figure { k: string; r?: FigureRow[]; v?: (number | string | null)[]; hi?: (number | string)[]; s?: string[]; cyc?: number; h?: number; cap?: string }
+export interface Figure { k: string; cap?: string; r?: any[]; [key: string]: any }
 
 /** Multiple-choice "Quick Challenge" shown under the walkthrough. */
 export interface Challenge {
@@ -77,8 +83,14 @@ export interface Problem {
 
   /** Java solution shown in the walkthrough + editor. */
   code: string;
-  /** name of the method the runner calls */
+  /** name of the method the runner calls (for design problems: the class name; each test case is [constructorArgs, [[op, ...args], ...]]) */
   method: string;
+  /** the result is a list whose ORDER is not defined (groups, subsets, permutations…): the top-level list is compared as a set */
+  unordered?: boolean;
+  /** the result is an array and only this element is meaningful (e.g. LCA returns a subtree; element 0 is its root value) */
+  resultIndex?: number;
+  /** extra Java classes the solution assumes (e.g. LeetCode's Node), added only when referenced */
+  prelude?: string;
 
   /** text shown in the input boxes; parsed to an argument list */
   defaultInput: string;
@@ -87,7 +99,7 @@ export interface Problem {
 
   /** a faster approach worth knowing; shown as a teaser card (the page code stays the simple version) */
   better?: { name: string; time: string; space: string; /** full Java source of the faster solution */ code?: string };
-  figure?: Figure;
+  figure?: Figure | Figure[];
   challenge?: Challenge;
   memory?: InterviewMemory;
 

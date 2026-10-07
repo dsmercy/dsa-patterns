@@ -30,7 +30,7 @@ export function Visualizer({ problem, input, onInput, watchSignal = 0 }: { probl
     try { args = parse(applied); } catch { args = parse(problem.defaultInput); }
     if (problem.buildSteps) { setLoaded({ steps: problem.buildSteps(args), truncated: false }); return; }
     setLoaded((l) => ({ ...l, steps: [LOADING] }));
-    traceJava(problem.code, problem.method, args).then((r) => {
+    traceJava(problem.code, problem.method, args, 4000, problem.prelude).then((r) => {
       if (cancelled) return;
       if (!r.ok) { setLoaded({ steps: [{ ...LOADING, note: r.error }], truncated: false }); return; }
       const res = r.results[0];

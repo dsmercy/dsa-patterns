@@ -187,7 +187,7 @@ class Compiler {
     const inits: string[] = [];
     for (const f of d.fields) {
       if (f.static) continue;
-      inits.push(`this.${jsName(f.name)} = ${f.init ? this.coerce(f.init, f.type, ctorCtx) : defaultOf(f.type)};`);
+      inits.push(`this.${this.fname(ci, f.name)} = ${f.init ? this.coerce(f.init, f.type, ctorCtx) : defaultOf(f.type)};`);
     }
     out.push(`  constructor() { ${ext ? "super(); " : ""}${inits.join(" ")} }`);
     for (const c of ci.ctors) out.push(this.emitMethod(ci, c));
@@ -200,7 +200,7 @@ class Compiler {
     const out: string[] = [];
     const ctx = this.mkCtx(ci, true, "<clinit>", VOID);
     ci.decl.enumConsts.forEach((c, i) => out.push(`${ci.name}.${jsName(c)} = Object.assign(new ${ci.name}(), { $name: ${q(c)}, $ordinal: ${i} });`));
-    for (const f of ci.decl.fields) if (f.static) out.push(`${ci.name}.${jsName(f.name)} = ${f.init ? this.coerce(f.init, f.type, ctx) : defaultOf(f.type)};`);
+    for (const f of ci.decl.fields) if (f.static) out.push(`${ci.name}.${this.fname(ci, f.name)} = ${f.init ? this.coerce(f.init, f.type, ctx) : defaultOf(f.type)};`);
     return out.join("\n");
   }
 
@@ -426,9 +426,9 @@ class Compiler {
     for (let c: ClassInfo | undefined = ctx.cls; c; c = c.outer) {
       const f = c.fields.get(e.name);
       if (f) {
-        if (f.static) return [`${f.owner.name}.${jsName(e.name)}`, f.type];
+        if (f.static) return [`${f.owner.name}.${this.fname(f.owner, e.name)}`, f.type];
         if (c !== ctx.cls || ctx.isStatic) this.err(`non-static variable ${e.name} cannot be referenced from a static context`, e.line);
-        return [`this.${jsName(e.name)}`, f.type];
+        return [`this.${this.fname(f.owner, e.name)}`, f.type];
       }
     }
     if (this.classes.has(e.name) || STATIC_CLASSES.has(e.name)) return [e.name, T("$class:" + e.name)];
@@ -440,7 +440,7 @@ class Compiler {
     if (e.obj.k === "id" && !ctx.scope.find(e.obj.name) && !this.hasField(ctx.cls, e.obj.name)) {
       const cn = e.obj.name;
       const uc = this.classes.get(cn);
-      if (uc) { const f = uc.fields.get(e.name); if (f) return [`${cn}.${jsName(e.name)}`, f.type]; if (e.name === "length") { /* fallthrough */ } this.err(`cannot find symbol: variable ${e.name} in ${cn}`, e.line); }
+      if (uc) { const f = uc.fields.get(e.name); if (f) return [`${cn}.${this.fname(uc, e.name)}`, f.type]; if (e.name === "length") { /* fallthrough */ } this.err(`cannot find symbol: variable ${e.name} in ${cn}`, e.line); }
       const k = `${cn}.${e.name}`;
       const consts: Record<string, [string, Type]> = {
         "Integer.MAX_VALUE": ["2147483647", INT], "Integer.MIN_VALUE": ["(-2147483648)", INT], "Long.MAX_VALUE": ["9223372036854775807", LONG], "Long.MIN_VALUE": ["(-9223372036854775808)", LONG],
@@ -457,11 +457,16 @@ class Compiler {
     if (ot.dims === 0 && !isUnk(ot)) {
       const ci = this.classes.get(ot.name);
       const f = ci && this.findField(ci, e.name);
-      if (f) return [`${oc}.${jsName(e.name)}`, f.type];
+      if (f) return [`${oc}.${this.fname(f.owner, e.name)}`, f.type];
       if (ci) this.err(`cannot find symbol: variable ${e.name} in ${ot.name}`, e.line);
-      if (ot.name.startsWith("$class:")) { const cn = ot.name.slice(7); const uc = this.classes.get(cn); if (uc) { const f2 = uc.fields.get(e.name); if (f2) return [`${cn}.${jsName(e.name)}`, f2.type]; } }
+      if (ot.name.startsWith("$class:")) { const cn = ot.name.slice(7); const uc = this.classes.get(cn); if (uc) { const f2 = uc.fields.get(e.name); if (f2) return [`${cn}.${this.fname(uc, e.name)}`, f2.type]; } }
     }
     return [`${oc}.${jsName(e.name)}`, UNK];
+  }
+  /** JS property name of a field: a field and a method may share a name in Java (`size` / `size()`), but not in a JS class */
+  private fname(owner: ClassInfo, n: string): string {
+    for (let c: ClassInfo | undefined = owner; c; c = c.decl.ext ? this.classes.get(c.decl.ext) : undefined) if (c.methods.has(n)) return `${n}$f`;
+    return jsName(n);
   }
   private hasField(c: ClassInfo, n: string): boolean { for (let k: ClassInfo | undefined = c; k; k = k.outer) if (k.fields.has(n)) return true; return false; }
   private findField(ci: ClassInfo, n: string): FieldInfo | undefined {
@@ -554,13 +559,13 @@ class Compiler {
       return { type: t, get: c, set: (v) => `(${c} = ${v})`, simple: true };
     }
     if (e.k === "field") {
-      const [, t] = this.field(e, ctx);
+      const [acc, t] = this.field(e, ctx);
       const [oc] = this.expr(e.obj, ctx);
-      const isStaticRef = e.obj.k === "id" && this.classes.has(e.obj.name) && !ctx.scope.find(e.obj.name);
-      const fname = `${isStaticRef ? e.obj.k === "id" ? e.obj.name : oc : oc}.${jsName(e.name)}`;
+      const fname = acc;
+      const prop = acc.slice(acc.lastIndexOf(".") + 1);
       const simple = /^[\w$.]+$/.test(oc);
       if (simple) return { type: t, get: fname, set: (v) => `(${fname} = ${v})`, simple: true };
-      return { type: t, get: fname, set: (v) => `(${fname} = ${v})`, simple: false, wrap: (inner) => `((__o) => ${inner("__o." + jsName(e.name), (v) => `(__o.${jsName(e.name)} = ${v})`)})(${oc})` };
+      return { type: t, get: fname, set: (v) => `(${fname} = ${v})`, simple: false, wrap: (inner) => `((__o) => ${inner("__o." + prop, (v) => `(__o.${prop} = ${v})`)})(${oc})` };
     }
     if (e.k === "index") {
       const [ac, at] = this.expr(e.arr, ctx), [ic] = this.expr(e.idx, ctx);

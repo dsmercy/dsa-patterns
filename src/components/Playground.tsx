@@ -25,6 +25,10 @@ export function Playground({ problem, input, onInput }: { problem: Problem; inpu
   useEffect(() => { setRows([]); setCon(HINT); }, [problem.id]);
 
   /** expected result: stored (generated from the reference Java) or computed by the hand-written JS reference */
+  /** problems whose result is a subtree etc. compare/show one element only */
+  const norm = (x: unknown) => (problem.resultIndex !== undefined && Array.isArray(x) ? x[problem.resultIndex] ?? null : x);
+  /** order-free results: sort the top-level list by its JSON before comparing */
+  const canon = (x: unknown) => (problem.unordered && Array.isArray(x) ? [...x].sort((a, b) => (JSON.stringify(a) < JSON.stringify(b) ? -1 : 1)) : x);
   const expectedFor = (args: Args, stored?: unknown): { checked: boolean; value?: unknown } => {
     if (stored !== undefined) return { checked: true, value: stored };
     if (!problem.reference) return { checked: false };
@@ -39,7 +43,7 @@ export function Playground({ problem, input, onInput }: { problem: Problem; inpu
     const all = [{ name: "Your input", args: custom, expected: undefined as unknown }, ...tests];
     const id = ++stale.current;
     setRunning(true);
-    const out = await runJava(code, problem.method, all.map((c) => c.args));
+    const out = await runJava(code, problem.method, all.map((c) => c.args), 4000, problem.prelude);
     if (id !== stale.current) return;
     setRunning(false);
 
@@ -50,13 +54,13 @@ export function Playground({ problem, input, onInput }: { problem: Problem; inpu
     }
     const next: Row[] = out.results.map((res, i) => {
       const exp = i === 0 ? expectedFor(all[0].args, undefined) : expectedFor(all[i].args, all[i].expected);
-      return { name: all[i].name, args: all[i].args, res, expected: exp.value, checked: exp.checked, pass: res.ok && (!exp.checked || sameJson(res.value, exp.value)) };
+      return { name: all[i].name, args: all[i].args, res, expected: exp.value, checked: exp.checked, pass: res.ok && (!exp.checked || sameJson(canon(norm(res.value)), canon(exp.value))) };
     });
     const c = next[0];
     const lines: Console = [{ cls: "d", text: `input  ${show(c.args)}` }];
     c.res.logs.forEach((l) => lines.push({ cls: "", text: l }));
     if (!c.res.ok) lines.push({ cls: "e", text: `✖ ${c.res.errorName ? c.res.error : "Exception: " + c.res.error}${c.res.line ? `  (line ${c.res.line})` : ""}` });
-    else lines.push({ cls: c.pass ? "g" : "e", text: `output ${c.res.text ?? json(c.res.value)}${c.checked ? (c.pass ? "  ✓ matches expected" : `  ✖ expected ${json(c.expected)}`) : ""}` });
+    else lines.push({ cls: c.pass ? "g" : "e", text: `output ${problem.resultIndex !== undefined ? json(norm(c.res.value)) : (c.res.text ?? json(c.res.value))}${c.checked ? (c.pass ? "  ✓ matches expected" : `  ✖ expected ${json(c.expected)}`) : ""}` });
     setCon(lines);
     setRows(next.slice(1));
   };
@@ -104,7 +108,7 @@ export function Playground({ problem, input, onInput }: { problem: Problem; inpu
                     <span className="dot" />
                     <div><b style={{ font: "700 13px var(--sans)" }}>{r.name}</b><small>{show(r.args)}</small></div>
                     <div className="r">
-                      {!r.res.ok ? `✖ ${r.res.error}` : r.pass ? `✓ ${r.res.text ?? json(r.res.value)}` : `${r.res.text ?? json(r.res.value)} ≠ ${json(r.expected)}`}
+                      {!r.res.ok ? `✖ ${r.res.error}` : r.pass ? `✓ ${problem.resultIndex !== undefined ? json(norm(r.res.value)) : (r.res.text ?? json(r.res.value))}` : `${problem.resultIndex !== undefined ? json(norm(r.res.value)) : (r.res.text ?? json(r.res.value))} ≠ ${json(r.expected)}`}
                     </div>
                   </div>
                 ))}

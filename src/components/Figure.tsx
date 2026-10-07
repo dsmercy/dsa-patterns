@@ -1,30 +1,45 @@
 import type { Figure as FigureData, FigureRow } from "../problems/types";
+import { ListView, TreeView } from "./stages/Structures";
 
-/** The handbook's static key-idea picture. Supports arr | bars | flow | tree | list; unknown kinds render nothing. */
-export function Figure({ figure: f }: { figure: FigureData }) {
-  let body: JSX.Element | null = null;
-  if ((f.k === "arr" || f.k === "bars") && f.r) body = <div className="fig-rows">{f.r.map((r, i) => <FigRow key={i} row={r} bars={f.k === "bars"} />)}</div>;
-  else if (f.k === "flow" && f.s) body = <Flow steps={f.s} />;
-  else if (f.k === "tree" && f.v) body = <HeapTree values={f.v} hi={f.hi ?? []} />;
-  else if (f.k === "list" && f.v) body = <IndexList values={f.v as number[]} cyc={f.cyc} hi={f.hi ?? []} />;
-  if (!body) return null;
+/** The handbook's static key-idea picture(s). Unknown kinds render nothing. */
+export function Figure({ figure }: { figure: FigureData | FigureData[] }) {
+  const parts = Array.isArray(figure) ? figure : [figure];
+  const shown = parts.map((f, i) => <One key={i} f={f} />).filter(Boolean);
+  const cap = parts.map((f) => f.cap).filter(Boolean).join(" ");
   return (
     <figure className="figure pressed">
-      {body}
-      {f.cap && <figcaption>{f.cap}</figcaption>}
+      <div className="fig-parts">{shown}</div>
+      {cap && <figcaption>{cap}</figcaption>}
     </figure>
   );
+}
+
+function One({ f }: { f: FigureData }) {
+  switch (f.k) {
+    case "arr": case "bars": return f.r ? <div className="fig-rows">{f.r.map((r: FigureRow, i: number) => <FigRow key={i} row={r} bars={f.k === "bars"} />)}</div> : null;
+    case "flow": return f.s ? <Flow steps={f.s} /> : null;
+    case "txt": return <pre className="fig-txt">{(f.lines ?? []).join("\n")}</pre>;
+    case "tree": return f.v ? <TreeView values={f.v} ok={f.ok ?? []} hi={f.hi ?? []} no={f.no ?? []} width={f.v.length > 15 ? 520 : 380} /> : null;
+    case "list": return f.v ? <ListView values={f.v} ok={f.ok ?? []} hi={f.hi ?? []} no={f.no ?? []} cyc={f.cyc} marks={Object.fromEntries(Object.entries((f.p ?? {}) as Record<string, string>).map(([k, v]) => [k, [v]]))} /> : null;
+    case "grid": return f.v ? <GridFig f={f} /> : null;
+    case "graph": return f.n ? <GraphFig f={f} /> : null;
+    case "stack": return f.s ? <StackFig items={f.s} /> : null;
+    case "ivl": return f.r ? <IvlFig f={f} /> : null;
+    case "nary": return f.t ? <pre className="fig-txt">{String(f.t)}</pre> : null;
+    default: return null;
+  }
 }
 
 function FigRow({ row, bars }: { row: FigureRow; bars: boolean }) {
   const max = Math.max(1, ...row.v.map((x) => (typeof x === "number" ? Math.abs(x) : 0)));
   const n = row.v.length;
+  const dim = (row as { dim?: number[] }).dim ?? [];
   return (
     <div className="fig-row">
       {row.l && <span className="rowlabel">{row.l}</span>}
       <div className="fig-cells" style={{ gridTemplateColumns: `repeat(${n}, minmax(38px, 54px))` }}>
         {row.v.map((x, i) => {
-          const cls = row.ok?.includes(i) ? "win" : row.hi?.includes(i) ? "cur" : row.no?.includes(i) ? "no" : "";
+          const cls = row.ok?.includes(i) ? "win" : row.hi?.includes(i) ? "cur" : row.no?.includes(i) ? "no" : dim.includes(i) ? "future" : "";
           const water = row.w?.[i] ?? 0;
           const h = bars && typeof x === "number" ? 28 + Math.round((Math.abs(x) / max) * 76) : 40;
           return (
@@ -60,35 +75,91 @@ function Flow({ steps }: { steps: string[] }) {
   );
 }
 
-/** level-order array drawn as a binary tree (used for heaps) */
-function HeapTree({ values, hi }: { values: (number | string | null)[]; hi: (number | string)[] }) {
-  const levels = Math.max(1, Math.ceil(Math.log2(values.length + 1)));
-  const W = 360, H = levels * 62 + 10;
-  const pos = (i: number) => { const d = Math.floor(Math.log2(i + 1)), k = i + 1 - 2 ** d; return { x: ((k + 0.5) / 2 ** d) * W, y: d * 62 + 28 }; };
+const has = (list: number[][] | undefined, r: number, c: number) => !!list?.some(([a, b]) => a === r && b === c);
+function GridFig({ f }: { f: FigureData }) {
+  const g = f.v as (number | string)[][];
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="fig-tree" role="img" aria-label="tree">
-      {values.map((_, i) => i > 0 && values[i] !== null && <line key={`l${i}`} x1={pos(Math.floor((i - 1) / 2)).x} y1={pos(Math.floor((i - 1) / 2)).y} x2={pos(i).x} y2={pos(i).y} stroke="currentColor" strokeOpacity=".35" strokeWidth="2" />)}
-      {values.map((v, i) => v !== null && (
-        <g key={i} transform={`translate(${pos(i).x},${pos(i).y})`}>
-          <circle r="20" className={hi.includes(v) ? "tn win" : "tn"} />
-          <text textAnchor="middle" dy=".35em">{String(v)}</text>
+    <div className="fig-grid" style={{ gridTemplateColumns: `${f.rl ? "auto " : ""}repeat(${g[0]?.length ?? 1}, 44px)` }}>
+      {f.cl && <>{f.rl && <span />}{(f.cl as string[]).map((c, i) => <span key={i} className="day" style={{ textAlign: "center" }}>{c}</span>)}</>}
+      {g.map((row, r) => (
+        <div key={r} style={{ display: "contents" }}>
+          {f.rl && <span className="day" style={{ alignSelf: "center" }}>{(f.rl as string[])[r]}</span>}
+          {row.map((v, c) => {
+            const cls = has(f.ok, r, c) ? "win" : has(f.hi, r, c) ? "cur" : has(f.bl, r, c) ? "low" : has(f.no, r, c) ? "no" : "";
+            return <div key={c} className={`bar ${cls}`} style={{ height: 44, alignItems: "center", paddingTop: 0, fontSize: 14 }}>{String(v)}</div>;
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function GraphFig({ f }: { f: FigureData }) {
+  const pos = f.pos as [number, number][];
+  const maxX = Math.max(...pos.map((p) => p[0]), 1), maxY = Math.max(...pos.map((p) => p[1]), 1);
+  const sx = 340 / maxX, sy = Math.min(46, 180 / maxY);
+  const P = (i: number) => ({ x: 30 + pos[i][0] * sx, y: 28 + pos[i][1] * sy });
+  const W = 400, H = 56 + maxY * sy;
+  const r = 17;
+  const nodeCls = (i: number) => (f.ok?.includes(i) ? "tn win" : f.hi?.includes(i) ? "tn cur" : f.bl?.includes(i) ? "tn low" : "tn");
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="fig-tree" role="img" aria-label="graph" style={{ maxWidth: W }}>
+      <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor" opacity=".6" /></marker></defs>
+      {(f.e as number[][]).map(([a, b, w], k) => {
+        const A = P(a), B = P(b), dx = B.x - A.x, dy = B.y - A.y, len = Math.hypot(dx, dy) || 1;
+        const x1 = A.x + (dx / len) * r, y1 = A.y + (dy / len) * r, x2 = B.x - (dx / len) * (r + (f.d ? 4 : 0)), y2 = B.y - (dy / len) * (r + (f.d ? 4 : 0));
+        const hot = f.he?.includes(k);
+        return (
+          <g key={k} style={{ color: hot ? "var(--ok)" : "var(--ink)" }}>
+            <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="currentColor" strokeOpacity={hot ? 0.9 : 0.4} strokeWidth={hot ? 3 : 2} markerEnd={f.d ? "url(#arr)" : undefined} />
+            {w !== undefined && <text x={(A.x + B.x) / 2} y={(A.y + B.y) / 2 - 5} textAnchor="middle" className="tn-mark" style={{ fill: "var(--swap)" }}>{w}</text>}
+          </g>
+        );
+      })}
+      {pos.map((_, i) => (
+        <g key={i} transform={`translate(${P(i).x},${P(i).y})`}>
+          <circle r={r} className={nodeCls(i)} />
+          <text textAnchor="middle" dy=".35em" style={{ fontSize: 13 }}>{String(f.lab?.[i] ?? i)}</text>
         </g>
       ))}
     </svg>
   );
 }
 
-/** "index → value" linked list: node i points to node values[i] */
-function IndexList({ values, cyc, hi }: { values: number[]; cyc?: number; hi: (number | string)[] }) {
+function StackFig({ items }: { items: { l: string; v: (string | number)[]; hi?: number[] }[] }) {
   return (
-    <div className="fig-list">
-      {values.map((v, i) => (
-        <div key={i} className="fig-node">
-          <div className={`bar ${hi.includes(i) || cyc === i ? "win" : ""}`} style={{ height: 44, alignItems: "center", paddingTop: 0 }}>{v}</div>
-          <div className="day">index {i}</div>
+    <div className="fig-stacks">
+      {items.map((s, k) => (
+        <div key={k} className="fig-stack">
+          <div className="day" style={{ marginBottom: 6 }}>{s.l}</div>
+          <div className="stack-col">
+            {s.v.length === 0 && <div className="bar empty" style={{ height: 36, width: 80 }} />}
+            {[...s.v].reverse().map((x, i) => {
+              const idx = s.v.length - 1 - i;
+              return <div key={i} className={`bar ${s.hi?.includes(idx) ? "cur" : ""}`} style={{ height: 38, width: 84, alignItems: "center", paddingTop: 0, fontSize: 14 }}>{String(x)}</div>;
+            })}
+          </div>
+          <div className="day">{s.v.length ? "↑ top" : "empty"}</div>
         </div>
       ))}
-      {cyc !== undefined && <div className="fig-cycle">cycle back to index {cyc}</div>}
+    </div>
+  );
+}
+
+function IvlFig({ f }: { f: FigureData }) {
+  const mx = f.mx as number;
+  return (
+    <div className="fig-ivl">
+      {(f.r as { l: string; s: number[][]; ok?: number[]; hi?: number[] }[]).map((row, i) => (
+        <div key={i} className="ivl-row">
+          <span className="rowlabel">{row.l}</span>
+          <div className="ivl-track">
+            {row.s.map(([a, b], k) => (
+              <div key={k} className={`ivl-bar ${row.ok?.includes(k) ? "win" : row.hi?.includes(k) ? "cur" : ""}`} style={{ left: `${(a / mx) * 100}%`, width: `${Math.max(((b - a) / mx) * 100, 6)}%` }}>[{a},{b}]</div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

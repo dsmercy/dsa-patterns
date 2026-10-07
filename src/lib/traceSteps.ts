@@ -5,7 +5,7 @@
  *   - cells that changed since the previous step are highlighted
  *   - other scalars go to the state panel, collections / objects to the "extra" lines
  */
-import type { Cell, Step } from "../problems/types";
+import type { Block, Cell, Step } from "../problems/types";
 import type { TraceStep } from "./java";
 
 type Snap = NonNullable<TraceStep["vars"][number]["v"]>;
@@ -24,7 +24,7 @@ export function traceToSteps(trace: TraceStep[], code: string, indexUse: Record<
     const isReturn = t.vars.length === 1 && t.vars[0].n === "return" && idx === trace.length - 1;
     if (isReturn && lastVisual) {
       const v = t.vars[0].v;
-      const text = v ? (v.kind === "array" ? `[${v.values.map(String).join(", ")}]` : v.kind === "array2" ? `[${v.rows.map((r) => `[${r.join(", ")}]`).join(", ")}]` : v.text) : "(void)";
+      const text = v ? (v.kind === "array" ? `[${v.values.map(String).join(", ")}]` : v.kind === "array2" ? `[${v.rows.map((r) => `[${r.join(", ")}]`).join(", ")}]` : v.kind === "tree" ? `tree [${v.values.map((x) => (x === null ? "null" : x)).join(",")}]` : v.kind === "list" ? `${v.values.join(" → ")}${v.cyc !== undefined ? " ↺" : ""}` : v.text) : "(void)";
       steps.push({ ...lastVisual, line: lastVisual.line, note: `Return ${text}`, done: true, hot: "RETURN", state: { ...lastVisual.state, RETURN: text.length > 22 ? text.slice(0, 21) + "…" : text }, extra: text.length > 22 ? [...(lastVisual.extra ?? []), { label: "return", text }] : lastVisual.extra });
       return;
     }
@@ -39,20 +39,27 @@ export function traceToSteps(trace: TraceStep[], code: string, indexUse: Record<
     const arrays: { name: string; values: (string | number | boolean | null)[]; elemType: string }[] = [];
     const ints = new Map<string, number>();
     const strings: { name: string; text: string }[] = [];
+    const structs: { name: string; snap: Extract<Snap, { kind: "tree" | "list" }> }[] = [];
 
     for (const v of t.vars) {
       if (!v.v) continue;
       const s: Snap = v.v;
       if (s.kind === "array") { arrays.push({ name: v.n, values: s.values, elemType: s.elemType }); next.arrays.set(v.n, s.values); }
       else if (s.kind === "array2") { s.rows.forEach((r, i) => { arrays.push({ name: `${v.n}[${i}]`, values: r, elemType: s.elemType }); next.arrays.set(`${v.n}[${i}]`, r); }); }
-      else if (s.kind === "scalar") {
+      else if (s.kind === "tree" || s.kind === "list") {
+        structs.push({ name: v.n, snap: s });
+        const sig = JSON.stringify(s);
+        next.scalars.set(v.n, sig);
+        const old = prev.scalars.get(v.n);
+        if (old !== undefined && old !== sig) changes.push(`${v.n} changed`);
+      } else if (s.kind === "scalar") {
         if (INT_TYPES.has(v.t) && /^-?\d+$/.test(s.text)) ints.set(v.n, Number(s.text));
         if (v.t === "String" && s.text.length - 2 <= MAX_STRING && s.text !== "null") strings.push({ name: v.n, text: JSON.parse(s.text) });
         else state[v.n] = s.text;
         next.scalars.set(v.n, s.text);
         const old = prev.scalars.get(v.n);
         if (old !== undefined && old !== s.text) { changes.push(`${v.n}: ${old} → ${s.text}`); hot ??= v.n; }
-      } else {
+      } else if (s.kind === "text") {
         extra.push({ label: v.n, text: s.text });
         next.scalars.set(v.n, s.text);
         const old = prev.scalars.get(v.n);
@@ -90,7 +97,13 @@ export function traceToSteps(trace: TraceStep[], code: string, indexUse: Record<
     const src = (lines[t.line - 1] ?? "").trim();
     const where = t.fn && !/^(Solution|<init>)$/.test(t.fn) ? `${t.fn}()  ` : "";
     const note = changes.length ? changes.slice(0, 3).join("   ·   ") + (changes.length > 3 ? "   …" : "") : idx === 0 ? "Start of the run" : `Next: ${src}`;
-    const step: Step = { line: Math.max(0, t.line - 1), note: where ? `${where}${note}` : note, state: stateOut, extra: extra.length ? extra : undefined, hot, stage: { kind: "rows", rows } };
+    const structBlocks: Block[] = structs.map(({ name, snap }) => snap.kind === "tree"
+      ? { type: "tree" as const, label: name, values: snap.values, marks: snap.marks, truncated: snap.truncated }
+      : { type: "list" as const, label: name, values: snap.values, cyc: snap.cyc, marks: snap.marks, truncated: snap.truncated });
+    const stage: Step["stage"] = structBlocks.length
+      ? { kind: "blocks", blocks: [...structBlocks, ...rows.map((r) => ({ type: "row" as const, ...r }))] }
+      : { kind: "rows", rows };
+    const step: Step = { line: Math.max(0, t.line - 1), note: where ? `${where}${note}` : note, state: stateOut, extra: extra.length ? extra : undefined, hot, stage };
     steps.push(step);
     lastVisual = step;
   });

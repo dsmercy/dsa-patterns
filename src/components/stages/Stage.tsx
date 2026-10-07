@@ -1,4 +1,5 @@
-import type { Cell, Problem, Stage as StageData } from "../../problems/types";
+import type { Block, Cell, Problem, Stage as StageData } from "../../problems/types";
+import { ListView, TreeView } from "./Structures";
 
 const classOf = (c: Cell) => `bar${c.role ? " " + c.role : ""}`;
 const Tags = ({ cell }: { cell: Cell }) => (
@@ -55,12 +56,39 @@ function Rows({ rows }: { rows: { label: string; values: (number | string | null
   );
 }
 
+/** arrays, trees and linked lists one under the other (traces of structure problems) */
+function Blocks({ blocks }: { blocks: Block[] }) {
+  return (
+    <div className="rows">
+      {blocks.map((b, k) => (
+        <div className="rowline" key={b.label + k}>
+          <span className="rowlabel">{b.label.length > 9 ? b.label.slice(0, 8) + "…" : b.label}</span>
+          {b.type === "tree" && <div style={{ flex: 1, minWidth: 0 }}><TreeView values={b.values} marks={b.marks} width={b.values.length > 15 ? 520 : 380} />{b.truncated && <div className="hint">deeper levels not drawn</div>}</div>}
+          {b.type === "list" && <ListView values={b.values} marks={b.marks} cyc={b.cyc} truncated={b.truncated} />}
+          {b.type === "row" && (
+            <div className="bars" style={{ alignItems: "center", minHeight: 0 }}>
+              {b.values.map((v, i) => (
+                <div className="col" key={i}>
+                  <Tags cell={b.cells[i] ?? {}} />
+                  <div className={`${classOf(b.cells[i] ?? {})}${v === null ? " empty" : ""}`} style={{ height: 52, alignItems: "center", paddingTop: 0 }}>{v === null ? "" : String(v)}</div>
+                  <div className="day">{i}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** Dispatches on stage.kind. New visual kinds are added here once and reused by every problem. */
 export function Stage({ stage, problem }: { stage: StageData; problem: Problem }) {
   switch (stage.kind) {
     case "bars": return <Bars values={stage.values} cells={stage.cells} />;
     case "tiles": return <Tiles values={stage.values} cells={stage.cells} />;
     case "rows": return <Rows rows={stage.rows} />;
+    case "blocks": return <Blocks blocks={stage.blocks} />;
     case "custom": { const C = problem.customStage; return C ? <C data={stage.data} /> : null; }
   }
 }
