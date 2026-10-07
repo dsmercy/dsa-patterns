@@ -255,3 +255,14 @@ footer{padding:44px 0;color:var(--dim);font:500 13px var(--sans);text-align:cent
 .ivl-bar{position:absolute;top:5px;height:30px;border-radius:10px;box-shadow:var(--raised-s);font:700 11px var(--mono);display:flex;align-items:center;justify-content:center;white-space:nowrap}
 .ivl-bar.win{color:var(--ok);background:linear-gradient(#72E0B424,#72E0B424),var(--bg)}
 .ivl-bar.cur{color:var(--pointer);background:linear-gradient(#8C9EFF24,#8C9EFF24),var(--bg)}
+
+/* bar chart with water (container / trapping rain water) */
+.bc{position:relative;display:flex;gap:12px;align-items:flex-end;min-width:max-content;height:236px;padding-top:34px}
+.bc-col{width:62px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;height:100%}
+.bc-col .tag{height:24px}
+.bc-stack{width:100%;display:flex;flex-direction:column-reverse;align-items:stretch}
+.bc-stack .bar{width:100%}
+.bc-stack .water{width:100%;border-radius:8px 8px 0 0;background:linear-gradient(#5BB5FF66,#5BB5FF33);color:#9ad1ff}
+.bc-area{position:absolute;bottom:0;border-radius:6px;background:linear-gradient(#5BB5FF55,#5BB5FF2A);border-top:2px solid #5BB5FFAA;pointer-events:none;display:flex;align-items:flex-start;justify-content:center;color:#9ad1ff;font:700 11px var(--mono);padding-top:4px;z-index:2}
+.bc-idx{display:flex;gap:12px;margin-top:4px;min-width:max-content}
+.bc-idx span{width:62px;text-align:center;font:600 11px var(--mono);color:var(--dim)}

@@ -65,6 +65,7 @@ const problem: Problem = {
   },
   "code": "class Solution {\n  public int trap(int[] height) {\n    int water = 0;\n    for (int i = 0; i < height.length; i++) {\n      int leftMax = 0, rightMax = 0;\n      for (int l = 0; l <= i; l++) leftMax = Math.max(leftMax, height[l]);\n      for (int r = i; r < height.length; r++) rightMax = Math.max(rightMax, height[r]);\n      water += Math.min(leftMax, rightMax) - height[i];\n    }\n    return water;\n  }\n}",
   "method": "trap",
+  "viz": "trap",
   "defaultInput": "[0,1,0,2,1,0,1,3,2,1,2,1]",
   "tests": [
     {

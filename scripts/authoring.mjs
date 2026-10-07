@@ -28,12 +28,14 @@ export default {
     p: "Sort + Two Pointers",
   },
   9: {
+    viz: "trap",
     tests: [t("Example", "[0,1,0,2,1,0,1,3,2,1,2,1]"), t("No water", "[1,2,3,4]"), t("Valley", "[3,0,3]"), t("Single bar", "[5]"), t("Flat", "[2,2,2]"), t("Down then up", "[4,2,0,3,2,5]")],
     c: { q: "How much rain water is trapped?", input: "[3,0,2,0,4]", e: "Each cell holds min(tallest on its left, tallest on its right) − its own height: 3 + 1 + 3 = 7." },
     r: "Water above a bar =\nmin(left max, right max) − height.",
     p: "Per-bar Water Level",
   },
   10: {
+    viz: "container",
     tests: [t("Example", "[1,8,6,2,5,4,8,3,7]"), t("Two bars", "[1,1]"), t("Tall ends", "[8,1,1,1,8]"), t("Increasing", "[1,2,3,4,5]"), t("Decreasing", "[5,4,3,2,1]"), t("All equal", "[4,4,4]")],
     c: { q: "What is the largest amount of water a container can hold?", input: "[2,5,4,1,6]", e: "The bars of height 5 and 6 are 3 apart: min(5, 6) × 3 = 15 — the biggest area." },
     r: "Width only shrinks,\nso always move the shorter wall.",
@@ -207,6 +209,7 @@ export default {
     r: "Partition around a pivot,\nthen recurse on both sides.",
   },
   41: {
+    viz: "heap",
     tests: [t("Example", "[5,2,9,1,5,6]"), t("Already sorted", "[1,2,3,4,5]"), t("Reversed", "[5,4,3,2,1]"), t("Single", "[7]"), t("Empty", "[]"), t("Duplicates", "[3,3,1,1,2,2]"), t("Negatives", "[0,-3,8,-1]")],
     c: { q: "Which value sits at the root of the max-heap built from [5,2,9,1,5,6]?", input: "[5,2,9,1,5,6]", options: ["5", "6", "9", "1"], correct: "9", e: "In a max-heap every parent is bigger than its children, so the largest value (9) is at the root." },
     r: "Build a max-heap, then keep moving\nthe biggest to the back.",

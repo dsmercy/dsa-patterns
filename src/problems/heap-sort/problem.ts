@@ -38,6 +38,7 @@ const problem: Problem = {
   },
   "code": "class Solution {\n  public int[] heapSort(int[] arr) {\n    int n = arr.length;\n    for (int i = n / 2 - 1; i >= 0; i--) sink(arr, i, n);   // build max-heap\n    for (int end = n - 1; end > 0; end--) {\n      int t = arr[0]; arr[0] = arr[end]; arr[end] = t;       // max to the end\n      sink(arr, 0, end);\n    }\n    return arr;\n  }\n  private void sink(int[] arr, int i, int size) {            // push arr[i] down to its place\n    while (true) {\n      int largest = i, l = 2 * i + 1, r = 2 * i + 2;\n      if (l < size && arr[l] > arr[largest]) largest = l;\n      if (r < size && arr[r] > arr[largest]) largest = r;\n      if (largest == i) return;\n      int t = arr[i]; arr[i] = arr[largest]; arr[largest] = t;\n      i = largest;\n    }\n  }\n}",
   "method": "heapSort",
+  "viz": "heap",
   "defaultInput": "[5,2,9,1,5,6]",
   "tests": [
     {

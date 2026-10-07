@@ -158,7 +158,7 @@ for (let n = lo; n <= hi; n++) {
     approach: h.plain, keyIdea: h.a, time: h.ts[0], space: h.ts[1], complexityWhy: h.w,
     figure: h.g ?? undefined,
     better: h.b ? { name: h.b.n, time: h.b.ts[0], space: h.b.ts[1], code: h.b.c } : undefined,
-    code: h.c, method, prelude: a.prelude, resultIndex: a.pick, unordered: a.unordered, defaultInput,
+    code: h.c, method, prelude: a.prelude, resultIndex: a.pick, unordered: a.unordered, viz: a.viz, defaultInput,
     tests, challenge,
     memory: { remember: a.r, pattern: pattern ?? "" },
   };

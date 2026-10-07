@@ -47,6 +47,7 @@ const problem: Problem = {
   },
   "code": "class Solution {\n  public int maxArea(int[] height) {\n    int left = 0, right = height.length - 1, best = 0;\n    while (left < right) {\n      int h = Math.min(height[left], height[right]);\n      best = Math.max(best, h * (right - left));\n      if (height[left] < height[right]) left++;        // shorter side limits area\n      else right--;\n    }\n    return best;\n  }\n}",
   "method": "maxArea",
+  "viz": "container",
   "defaultInput": "[1,8,6,2,5,4,8,3,7]",
   "tests": [
     {

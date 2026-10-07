@@ -21,7 +21,7 @@ Expected results and quiz answers are **produced by running the reference Java**
 and each handbook "better" solution is cross-checked against it. Pages #1–#5 are hand-written (custom animations).
 
 **Input conventions** (see the header of each `authoring_*.mjs`): trees = level-order arrays with `null`; linked lists = arrays, a cycle = `{"list":[…],"pos":i}`, a shared tail = `{"list":[…],"join":{"arg":0,"index":i}}`; graphs = adjacency lists or `(n, edges)`; grids = arrays of row strings; **design problems** (LRU cache, MinStack, DSU, Codec…) = `[constructorArgs, [[operation, ...args], ...]]` with the class name as `method`.
-Flags: `pick` (compare one element of a returned subtree), `unordered` (compare the top-level list as a set), `prelude` (extra helper classes such as LeetCode's `Node`), `skipBetter`.
+Flags: `viz` (`container` / `trap` / `heap` — draws the trace like the video: bars + water, or the heap as a tree), `pick` (compare one element of a returned subtree), `unordered` (compare the top-level list as a set), `prelude` (extra helper classes such as LeetCode's `Node`), `skipBetter`.
 
 Every page: learn cards + handbook figure, **Watch it run** (live trace of the real Java: pointers, changed cells, variables),
 Quick Challenge, editable Java playground with test cases, Interview Memory.

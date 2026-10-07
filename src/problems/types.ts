@@ -18,6 +18,7 @@ export type Stage =
 
 export type Block =
   | { type: "row"; label: string; values: (number | string | null)[]; cells: Cell[] }
+  | { type: "bars"; label: string; values: number[]; cells: Cell[]; /** water rectangle between two walls (container problems) */ area?: { from: number; to: number; level: number }; /** water units stacked on each bar (trapping rain water) */ water?: number[] }
   | { type: "tree"; label: string; values: (number | null)[]; marks: Record<number, string[]>; truncated?: boolean }
   | { type: "list"; label: string; values: (number | string)[]; cyc?: number; marks: Record<number, string[]>; truncated?: boolean };
 
@@ -89,6 +90,8 @@ export interface Problem {
   unordered?: boolean;
   /** the result is an array and only this element is meaningful (e.g. LCA returns a subtree; element 0 is its root value) */
   resultIndex?: number;
+  /** how the live trace should draw the main array, mirroring the video: container = bars + water between two walls, trap = bars + trapped water, heap = the array also as a heap tree */
+  viz?: "container" | "trap" | "heap";
   /** extra Java classes the solution assumes (e.g. LeetCode's Node), added only when referenced */
   prelude?: string;
 

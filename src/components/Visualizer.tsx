@@ -35,7 +35,7 @@ export function Visualizer({ problem, input, onInput, watchSignal = 0 }: { probl
       if (!r.ok) { setLoaded({ steps: [{ ...LOADING, note: r.error }], truncated: false }); return; }
       const res = r.results[0];
       if (!res?.ok && !r.steps?.length) { setLoaded({ steps: [{ ...LOADING, note: res?.error ?? "The program stopped with an error" }], truncated: false }); return; }
-      const steps = traceToSteps(r.steps ?? [], problem.code, r.indexUse ?? {});
+      const steps = traceToSteps(r.steps ?? [], problem.code, r.indexUse ?? {}, problem.viz);
       if (!res?.ok && res?.error && steps.length) steps.push({ ...steps[steps.length - 1], note: `The program stopped: ${res.error}`, done: false, hot: undefined });
       setLoaded({ steps: steps.length ? steps : [LOADING], truncated: !!r.truncated });
     });
